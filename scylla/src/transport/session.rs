@@ -516,9 +516,9 @@ impl Session {
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn query(
+    pub async fn query<'a>(
         &self,
-        query: impl Into<Query>,
+        query: impl Into<Query<'a>>,
         values: impl ValueList,
     ) -> Result<QueryResult, QueryError> {
         self.query_paged(query, values, None).await
@@ -530,16 +530,16 @@ impl Session {
     /// * `query` - query to be performed
     /// * `values` - values bound to the query
     /// * `paging_state` - previously received paging state or None
-    pub async fn query_paged(
+    pub async fn query_paged<'a>(
         &self,
-        query: impl Into<Query>,
+        query: impl Into<Query<'a>>,
         values: impl ValueList,
         paging_state: Option<Bytes>,
     ) -> Result<QueryResult, QueryError> {
         let query: Query = query.into();
         let serialized_values = values.serialized()?;
 
-        let span = trace_span!("Request", query = query.contents.as_str());
+        let span = trace_span!("Request", query = query.contents.as_ref());
         let run_query_result = self
             .run_query(
                 Statement::default(),
@@ -661,7 +661,7 @@ impl Session {
     /// ```
     pub async fn query_iter(
         &self,
-        query: impl Into<Query>,
+        query: impl Into<Query<'_>>,
         values: impl ValueList,
     ) -> Result<RowIterator, QueryError> {
         let query: Query = query.into();
@@ -672,7 +672,7 @@ impl Session {
             None => self.retry_policy.new_session(),
         };
 
-        let span = trace_span!("Request", query = query.contents.as_str());
+        let span = trace_span!("Request", query = query.contents.as_ref());
         RowIterator::new_for_query(
             query,
             serialized_values.into_owned(),
@@ -721,7 +721,7 @@ impl Session {
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn prepare(&self, query: impl Into<Query>) -> Result<PreparedStatement, QueryError> {
+    pub async fn prepare(&self, query: impl Into<Query<'_>>) -> Result<PreparedStatement, QueryError> {
         let query = query.into();
 
         let connections = self.cluster.get_working_connections().await?;
@@ -1011,7 +1011,7 @@ impl Session {
     /// ```
     pub async fn batch(
         &self,
-        batch: &Batch,
+        batch: &Batch<'_>,
         values: impl BatchValues,
     ) -> Result<QueryResult, QueryError> {
         let values_ref = &values;
@@ -1063,7 +1063,7 @@ impl Session {
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn prepare_batch(&self, batch: &Batch) -> Result<Batch, QueryError> {
+    pub async fn prepare_batch<'a>(&self, batch: &Batch<'a>) -> Result<Batch<'a>, QueryError> {
         let mut prepared_batch = batch.clone();
 
         try_join_all(
@@ -1079,6 +1079,9 @@ impl Session {
                 }),
         )
         .await?;
+
+        // We could technically return a `Batch<'static>` here, but it would require
+        // `unsafe`
 
         Ok(prepared_batch)
     }

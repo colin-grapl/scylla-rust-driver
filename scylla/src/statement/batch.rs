@@ -12,14 +12,14 @@ pub use crate::frame::request::batch::BatchType;
 ///
 /// This represents a CQL batch that can be executed on a server.
 #[derive(Clone)]
-pub struct Batch {
+pub struct Batch<'a> {
     pub(crate) config: StatementConfig,
 
-    pub statements: Vec<BatchStatement>,
+    pub statements: Vec<BatchStatement<'a>>,
     batch_type: BatchType,
 }
 
-impl Batch {
+impl<'a> Batch<'a> {
     /// Creates a new, empty `Batch` of `batch_type` type.
     pub fn new(batch_type: BatchType) -> Self {
         Self {
@@ -29,7 +29,7 @@ impl Batch {
     }
 
     /// Creates a new, empty `Batch` of `batch_type` type with the provided statements.
-    pub fn new_with_statements(batch_type: BatchType, statements: Vec<BatchStatement>) -> Self {
+    pub fn new_with_statements(batch_type: BatchType, statements: Vec<BatchStatement<'a>>) -> Self {
         Self {
             batch_type,
             statements,
@@ -38,7 +38,7 @@ impl Batch {
     }
 
     /// Appends a new statement to the batch.
-    pub fn append_statement(&mut self, statement: impl Into<BatchStatement>) {
+    pub fn append_statement(&mut self, statement: impl Into<BatchStatement<'a>>) {
         self.statements.push(statement.into());
     }
 
@@ -130,7 +130,7 @@ impl Batch {
     }
 }
 
-impl Default for Batch {
+impl<'a> Default for Batch<'a> {
     fn default() -> Self {
         Self {
             statements: Vec::new(),
@@ -142,24 +142,36 @@ impl Default for Batch {
 
 /// This enum represents a CQL statement, that can be part of batch.
 #[derive(Clone)]
-pub enum BatchStatement {
-    Query(Query),
+pub enum BatchStatement<'a> {
+    Query(Query<'a>),
     PreparedStatement(PreparedStatement),
 }
 
-impl From<&str> for BatchStatement {
-    fn from(s: &str) -> Self {
+impl<'a> From<&'a str> for BatchStatement<'a> {
+    fn from(s: &'a str) -> Self {
         BatchStatement::Query(Query::from(s))
     }
 }
 
-impl From<Query> for BatchStatement {
-    fn from(q: Query) -> Self {
+impl<'a> From<&'a String> for BatchStatement<'a> {
+    fn from(s: &'a String) -> Self {
+        BatchStatement::Query(Query::from(s.as_str()))
+    }
+}
+
+impl From<String> for BatchStatement<'static> {
+    fn from(s: String) -> Self {
+        BatchStatement::Query(Query::from(s))
+    }
+}
+
+impl<'a> From<Query<'a>> for BatchStatement<'a> {
+    fn from(q: Query<'a>) -> Self {
         BatchStatement::Query(q)
     }
 }
 
-impl From<PreparedStatement> for BatchStatement {
+impl From<PreparedStatement> for BatchStatement<'static> {
     fn from(p: PreparedStatement) -> Self {
         BatchStatement::PreparedStatement(p)
     }

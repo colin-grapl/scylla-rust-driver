@@ -30,38 +30,38 @@ impl CachingSession {
     }
 
     /// Does the same thing as [`Session::execute`] but uses the prepared statement cache
-    pub async fn execute(
+    pub async fn execute<'a>(
         &self,
-        query: impl Into<Query>,
+        query: impl Into<Query<'a>>,
         values: impl ValueList,
     ) -> Result<QueryResult, QueryError> {
         let query = query.into();
-        let prepared = self.add_prepared_statement(&query).await?;
+        let prepared = self.add_prepared_statement(query).await?;
         let values = values.serialized()?;
         self.session.execute(&prepared, values).await
     }
 
     /// Does the same thing as [`Session::execute_iter`] but uses the prepared statement cache
-    pub async fn execute_iter(
+    pub async fn execute_iter<'a>(
         &self,
-        query: impl Into<Query>,
+        query: impl Into<Query<'a>>,
         values: impl ValueList,
     ) -> Result<RowIterator, QueryError> {
         let query = query.into();
-        let prepared = self.add_prepared_statement(&query).await?;
+        let prepared = self.add_prepared_statement(query).await?;
         let values = values.serialized()?;
         self.session.execute_iter(prepared, values).await
     }
 
     /// Does the same thing as [`Session::execute_paged`] but uses the prepared statement cache
-    pub async fn execute_paged(
+    pub async fn execute_paged<'a>(
         &self,
-        query: impl Into<Query>,
+        query: impl Into<Query<'a>>,
         values: impl ValueList,
         paging_state: Option<Bytes>,
     ) -> Result<QueryResult, QueryError> {
         let query = query.into();
-        let prepared = self.add_prepared_statement(&query).await?;
+        let prepared = self.add_prepared_statement(query).await?;
         let values = values.serialized()?;
         self.session
             .execute_paged(&prepared, values, paging_state)
@@ -70,9 +70,9 @@ impl CachingSession {
 
     /// Does the same thing as [`Session::batch`] but uses the prepared statement cache\
     /// Prepares batch using CachingSession::prepare_batch if needed and then executes it
-    pub async fn batch(
+    pub async fn batch<'a>(
         &self,
-        batch: &Batch,
+        batch: &Batch<'a>,
         values: impl BatchValues,
     ) -> Result<QueryResult, QueryError> {
         let all_prepared: bool = batch
@@ -92,7 +92,7 @@ impl CachingSession {
     /// Prepares all statements within the batch and returns a new batch where every
     /// statement is prepared.
     /// Uses the prepared statements cache.
-    pub async fn prepare_batch(&self, batch: &Batch) -> Result<Batch, QueryError> {
+    pub async fn prepare_batch<'a>(&self, batch: &Batch<'a>) -> Result<Batch<'a>, QueryError> {
         let mut prepared_batch = batch.clone();
 
         try_join_all(
@@ -115,11 +115,11 @@ impl CachingSession {
     /// Adds a prepared statement to the cache
     pub async fn add_prepared_statement(
         &self,
-        query: impl Into<&Query>,
+        query: impl Into<Query<'_>>,
     ) -> Result<PreparedStatement, QueryError> {
         let query = query.into();
 
-        if let Some(prepared) = self.cache.get(&query.contents) {
+        if let Some(prepared) = self.cache.get(query.contents.as_ref()) {
             // Clone, because else the value is mutably borrowed and the execute method gives a compile error
             Ok(prepared.clone())
         } else {
@@ -138,7 +138,7 @@ impl CachingSession {
                 }
             }
 
-            self.cache.insert(query.contents.clone(), prepared.clone());
+            self.cache.insert(query.contents.into_owned(), prepared.clone());
 
             Ok(prepared)
         }
@@ -217,15 +217,15 @@ mod tests {
         let last_query = "update test_table set b = ? where a = 1";
 
         session
-            .add_prepared_statement(&first_query.into())
+            .add_prepared_statement(first_query)
             .await
             .unwrap();
         session
-            .add_prepared_statement(&middle_query.into())
+            .add_prepared_statement(middle_query)
             .await
             .unwrap();
         session
-            .add_prepared_statement(&last_query.into())
+            .add_prepared_statement(last_query)
             .await
             .unwrap();
 
@@ -334,15 +334,15 @@ mod tests {
         let unprepared_insert_a_7: &str = "insert into test_batch_table (a, b) values (?, 7)";
         let unprepared_insert_8_b: &str = "insert into test_batch_table (a, b) values (8, ?)";
         let prepared_insert_a_b: PreparedStatement = session
-            .add_prepared_statement(&unprepared_insert_a_b.into())
+            .add_prepared_statement(unprepared_insert_a_b)
             .await
             .unwrap();
         let prepared_insert_a_7: PreparedStatement = session
-            .add_prepared_statement(&unprepared_insert_a_7.into())
+            .add_prepared_statement(unprepared_insert_a_7)
             .await
             .unwrap();
         let prepared_insert_8_b: PreparedStatement = session
-            .add_prepared_statement(&unprepared_insert_8_b.into())
+            .add_prepared_statement(unprepared_insert_8_b)
             .await
             .unwrap();
 

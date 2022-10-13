@@ -319,7 +319,7 @@ impl Connection {
             .response)
     }
 
-    pub async fn prepare(&self, query: &Query) -> Result<PreparedStatement, QueryError> {
+    pub async fn prepare(&self, query: &Query<'_>) -> Result<PreparedStatement, QueryError> {
         let query_response = self
             .send_request(
                 &request::Prepare {
@@ -335,7 +335,7 @@ impl Connection {
             Response::Result(result::Result::Prepared(p)) => PreparedStatement::new(
                 p.id,
                 p.prepared_metadata,
-                query.contents.clone(),
+                query.contents.to_string(),
                 query.get_page_size(),
                 query.config.clone(),
             ),
@@ -354,7 +354,7 @@ impl Connection {
 
     async fn reprepare(
         &self,
-        query: impl Into<Query>,
+        query: impl Into<Query<'_>>,
         previous_prepared: &PreparedStatement,
     ) -> Result<(), QueryError> {
         let reprepare_query: Query = query.into();
@@ -390,7 +390,7 @@ impl Connection {
 
     pub async fn query_single_page(
         &self,
-        query: impl Into<Query>,
+        query: impl Into<Query<'_>>,
         values: impl ValueList,
     ) -> Result<QueryResult, QueryError> {
         let query: Query = query.into();
@@ -403,7 +403,7 @@ impl Connection {
 
     pub async fn query_single_page_with_consistency(
         &self,
-        query: impl Into<Query>,
+        query: impl Into<Query<'_>>,
         values: impl ValueList,
         consistency: Consistency,
     ) -> Result<QueryResult, QueryError> {
@@ -415,7 +415,7 @@ impl Connection {
 
     pub async fn query(
         &self,
-        query: &Query,
+        query: &Query<'_>,
         values: impl ValueList,
         paging_state: Option<Bytes>,
     ) -> Result<QueryResponse, QueryError> {
@@ -432,7 +432,7 @@ impl Connection {
 
     pub async fn query_with_consistency(
         &self,
-        query: &Query,
+        query: &Query<'_>,
         values: impl ValueList,
         consistency: Consistency,
         paging_state: Option<Bytes>,
@@ -458,7 +458,7 @@ impl Connection {
     /// Performs query_single_page multiple times to query all available pages
     pub async fn query_all(
         &self,
-        query: &Query,
+        query: &Query<'_>,
         values: impl ValueList,
     ) -> Result<QueryResult, QueryError> {
         self.query_all_with_consistency(
@@ -473,7 +473,7 @@ impl Connection {
 
     pub async fn query_all_with_consistency(
         &self,
-        query: &Query,
+        query: &Query<'_>,
         values: impl ValueList,
         consistency: Consistency,
     ) -> Result<QueryResult, QueryError> {
@@ -622,7 +622,7 @@ impl Connection {
     #[allow(dead_code)]
     pub async fn batch(
         &self,
-        batch: &Batch,
+        batch: &Batch<'_>,
         values: impl BatchValues,
     ) -> Result<QueryResult, QueryError> {
         self.batch_with_consistency(
@@ -637,7 +637,7 @@ impl Connection {
 
     pub async fn batch_with_consistency(
         &self,
-        batch: &Batch,
+        batch: &Batch<'_>,
         values: impl BatchValues,
         consistency: Consistency,
     ) -> Result<QueryResult, QueryError> {

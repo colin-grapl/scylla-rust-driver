@@ -384,8 +384,8 @@ async fn test_batch() {
     // to avoid problem of statements/values count mismatch
     use crate::batch::Batch;
     let mut batch: Batch = Default::default();
-    batch.append_statement(&format!("INSERT INTO {}.t_batch (a, b, c) VALUES (?, ?, ?)", ks)[..]);
-    batch.append_statement(&format!("INSERT INTO {}.t_batch (a, b, c) VALUES (7, 11, '')", ks)[..]);
+    batch.append_statement(format!("INSERT INTO {}.t_batch (a, b, c) VALUES (?, ?, ?)", ks));
+    batch.append_statement(format!("INSERT INTO {}.t_batch (a, b, c) VALUES (7, 11, '')", ks));
     batch.append_statement(prepared_statement.clone());
 
     let four_value: i32 = 4;
@@ -1009,14 +1009,14 @@ async fn test_tracing_execute_iter(session: &Session, ks: String) {
 async fn test_tracing_batch(session: &Session, ks: String) {
     // A batch without tracing enabled has no tracing id
     let mut untraced_batch: Batch = Default::default();
-    untraced_batch.append_statement(&format!("INSERT INTO {}.tab (a) VALUES('a')", ks)[..]);
+    untraced_batch.append_statement(format!("INSERT INTO {}.tab (a) VALUES('a')", ks));
 
     let untraced_batch_result: QueryResult = session.batch(&untraced_batch, ((),)).await.unwrap();
     assert!(untraced_batch_result.tracing_id.is_none());
 
     // Batch with tracing enabled has a tracing uuid in result
     let mut traced_batch: Batch = Default::default();
-    traced_batch.append_statement(&format!("INSERT INTO {}.tab (a) VALUES('a')", ks)[..]);
+    traced_batch.append_statement(format!("INSERT INTO {}.tab (a) VALUES('a')", ks));
     traced_batch.config.tracing = true;
 
     let traced_batch_result: QueryResult = session.batch(&traced_batch, ((),)).await.unwrap();
@@ -2351,7 +2351,7 @@ async fn test_batch_lwts() {
     }
 }
 
-async fn test_batch_lwts_for_scylla(session: &Session, batch: &Batch, batch_res: QueryResult) {
+async fn test_batch_lwts_for_scylla(session: &Session, batch: &Batch<'_>, batch_res: QueryResult) {
     // Alias required by clippy
     type IntOrNull = Option<i32>;
 
@@ -2391,7 +2391,7 @@ async fn test_batch_lwts_for_scylla(session: &Session, batch: &Batch, batch_res:
     assert_eq!(prepared_batch_res_rows, expected_prepared_batch_res_rows);
 }
 
-async fn test_batch_lwts_for_cassandra(session: &Session, batch: &Batch, batch_res: QueryResult) {
+async fn test_batch_lwts_for_cassandra(session: &Session, batch: &Batch<'_>, batch_res: QueryResult) {
     // Alias required by clippy
     type IntOrNull = Option<i32>;
 

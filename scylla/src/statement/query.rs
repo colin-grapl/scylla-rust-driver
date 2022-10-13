@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use super::StatementConfig;
 use crate::frame::types::{Consistency, SerialConsistency};
 use crate::history::HistoryListener;
@@ -9,16 +10,16 @@ use std::time::Duration;
 ///
 /// This represents a CQL query that can be executed on a server.
 #[derive(Clone)]
-pub struct Query {
+pub struct Query<'a> {
     pub(crate) config: StatementConfig,
 
-    pub contents: String,
+    pub contents: Cow<'a, str>,
     page_size: Option<i32>,
 }
 
-impl Query {
+impl<'a> Query<'a> {
     /// Creates a new `Query` from a CQL query string.
-    pub fn new(query_text: impl Into<String>) -> Self {
+    pub fn new(query_text: impl Into<Cow<'a, str>>) -> Self {
         Self {
             contents: query_text.into(),
             page_size: None,
@@ -26,6 +27,14 @@ impl Query {
         }
     }
 
+    /// Consumes the `Query<'a>` and produces a `Query<'static>`, cloning if necessary
+    pub fn into_owned(self) -> Query<'static> {
+        Query {
+            contents: Cow::from(self.contents.into_owned()),
+            page_size: self.page_size,
+            config: self.config,
+        }
+    }
     /// Returns self with page size set to the given value
     pub fn with_page_size(mut self, page_size: i32) -> Self {
         self.page_size = Some(page_size);
@@ -145,14 +154,24 @@ impl Query {
     }
 }
 
-impl From<String> for Query {
-    fn from(s: String) -> Query {
+impl From<String> for Query<'static> {
+    fn from(s: String) -> Query<'static> {
         Query::new(s)
     }
 }
 
-impl<'a> From<&'a str> for Query {
+impl<'a> From<&'a str> for Query<'a> {
     fn from(s: &'a str) -> Query {
-        Query::new(s.to_owned())
+        Query::new(s)
+    }
+}
+
+impl<'a, 'b: 'a> From<&'b Query<'a>> for Query<'a> {
+    fn from(s: &'b Query<'a>) -> Query<'a> {
+        Query {
+            contents: Cow::from(s.contents.as_ref()),
+            page_size: None,
+            config: Default::default(),
+        }
     }
 }

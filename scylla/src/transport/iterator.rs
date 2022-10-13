@@ -127,7 +127,7 @@ impl RowIterator {
     }
 
     pub(crate) async fn new_for_query(
-        mut query: Query,
+        mut query: Query<'_>,
         values: SerializedValues,
         default_consistency: Consistency,
         retry_session: Box<dyn RetrySession>,
@@ -138,6 +138,7 @@ impl RowIterator {
         if query.get_page_size().is_none() {
             query.set_page_size(DEFAULT_ITER_PAGE_SIZE);
         }
+        let query = query.into_owned();
         let (sender, mut receiver) = mpsc::channel(1);
         let consistency = query.config.determine_consistency(default_consistency);
 
