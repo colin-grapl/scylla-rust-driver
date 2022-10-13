@@ -38,7 +38,7 @@ impl CachingSession {
         let query = query.into();
         let prepared = self.add_prepared_statement(&query).await?;
         let values = values.serialized()?;
-        self.session.execute(&prepared, values.clone()).await
+        self.session.execute(&prepared, values).await
     }
 
     /// Does the same thing as [`Session::execute_iter`] but uses the prepared statement cache
@@ -50,7 +50,7 @@ impl CachingSession {
         let query = query.into();
         let prepared = self.add_prepared_statement(&query).await?;
         let values = values.serialized()?;
-        self.session.execute_iter(prepared, values.clone()).await
+        self.session.execute_iter(prepared, values).await
     }
 
     /// Does the same thing as [`Session::execute_paged`] but uses the prepared statement cache
@@ -64,7 +64,7 @@ impl CachingSession {
         let prepared = self.add_prepared_statement(&query).await?;
         let values = values.serialized()?;
         self.session
-            .execute_paged(&prepared, values.clone(), paging_state.clone())
+            .execute_paged(&prepared, values, paging_state)
             .await
     }
 
