@@ -220,6 +220,33 @@ pub fn parse_response_body_extensions(
     })
 }
 
+pub fn old_compress_append(
+    uncomp_body: &[u8],
+    compression: Compression,
+    out: &mut Vec<u8>,
+) -> Result<(), FrameError> {
+    match compression {
+        Compression::Lz4 => {
+            let uncomp_len = uncomp_body.len() as u32;
+            let tmp = lz4_flex::compress(uncomp_body);
+            out.reserve_exact(std::mem::size_of::<u32>() + tmp.len());
+            out.put_u32(uncomp_len);
+            out.extend_from_slice(&tmp[..]);
+
+            Ok(())
+        }
+        Compression::Snappy => {
+            let old_size = out.len();
+            out.resize(old_size + snap::raw::max_compress_len(uncomp_body.len()), 0);
+            let compressed_size = snap::raw::Encoder::new()
+                .compress(uncomp_body, &mut out[old_size..])
+                .map_err(|_| FrameError::FrameCompression)?;
+            out.truncate(old_size + compressed_size);
+            Ok(())
+        }
+    }
+}
+
 pub fn compress_append(
     uncomp_body: &[u8],
     compression: Compression,
