@@ -1,4 +1,5 @@
 .vscode
+/scylla-cql/target
 /scylla/target
 /target
 Cargo.lock
