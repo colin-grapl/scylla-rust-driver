@@ -688,7 +688,10 @@ impl ValueList for [u8; 0] {
 // Implement ValueList for slices of Value types
 impl<T: Value> ValueList for &[T] {
     fn serialized(&self) -> SerializedResult<'_> {
-        let mut result = SerializedValues::with_capacity(self.len());
+        let mut result = SerializedValues::with_capacity(
+            (self.len() * std::mem::size_of::<i32>()) + (self.len() * std::mem::size_of::<T>()),
+        );
+
         for val in *self {
             result.add_value(val)?;
         }
@@ -700,7 +703,9 @@ impl<T: Value> ValueList for &[T] {
 // Implement ValueList for Vec<Value>
 impl<T: Value> ValueList for Vec<T> {
     fn serialized(&self) -> SerializedResult<'_> {
-        let mut result = SerializedValues::with_capacity(self.len());
+        let mut result = SerializedValues::with_capacity(
+            (self.len() * std::mem::size_of::<i32>()) + (self.len() * std::mem::size_of::<T>()),
+        );
         for val in self {
             result.add_value(val)?;
         }
@@ -714,7 +719,10 @@ macro_rules! impl_value_list_for_map {
     ($map_type:ident, $key_type:ty) => {
         impl<T: Value> ValueList for $map_type<$key_type, T> {
             fn serialized(&self) -> SerializedResult<'_> {
-                let mut result = SerializedValues::with_capacity(self.len());
+                // Technically `4` is not the lower bound, but it's
+                // unlikely that the key and value are both empty
+                let mut result =
+                    SerializedValues::with_capacity(4 * (self.len() * std::mem::size_of::<i32>()));
                 for (key, val) in self {
                     result.add_named_value(key, val)?;
                 }
@@ -736,7 +744,8 @@ impl_value_list_for_map!(BTreeMap, &str);
 // Further variants are done using a macro
 impl<T0: Value> ValueList for (T0,) {
     fn serialized(&self) -> SerializedResult<'_> {
-        let mut result = SerializedValues::with_capacity(1);
+        let mut result =
+            SerializedValues::with_capacity(std::mem::size_of::<i32>() + std::mem::size_of::<T0>());
         result.add_value(&self.0)?;
         Ok(Cow::Owned(result))
     }
@@ -749,10 +758,13 @@ macro_rules! impl_value_list_for_tuple {
             $($Ti: Value),+
         {
             fn serialized(&self) -> SerializedResult<'_> {
-                let mut result = SerializedValues::with_capacity($size);
+                let cap = ($size * std::mem::size_of::<i32>())
+                    $(+ std::mem::size_of::<$Ti>())+;
+                let mut result = SerializedValues::with_capacity(cap);
                 $(
                     result.add_value(&self.$FieldI) ?;
                 )*
+
                 Ok(Cow::Owned(result))
             }
         }

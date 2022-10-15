@@ -66,7 +66,8 @@ impl SerializedRequest {
         tracing: bool,
     ) -> Result<SerializedRequest, FrameError> {
         let mut flags = 0;
-        let mut data = vec![0; HEADER_SIZE];
+        let mut data = Vec::with_capacity(std::cmp::max(HEADER_SIZE, 32));
+        data.resize(HEADER_SIZE, 0);
 
         if let Some(compression) = compression {
             flags |= FLAG_COMPRESSION;
