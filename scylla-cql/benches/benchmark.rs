@@ -81,7 +81,7 @@ criterion_group!(
     compress_append_bench,
     serialized_request_make_bench
 );
-//criterion_main!(benches);
+criterion_main!(benches);
 
 //use iai::main;
 
@@ -122,4 +122,4 @@ fn serialize_none_for_iai() {
     let _ = criterion::black_box(SerializedRequest::make(&query, None, false));
 }
 
-iai::main!(serialize_lz4_for_iai, serialize_none_for_iai);
+//iai::main!(serialize_lz4_for_iai, serialize_none_for_iai);
