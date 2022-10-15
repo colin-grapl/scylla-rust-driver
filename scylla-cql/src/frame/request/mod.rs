@@ -36,8 +36,12 @@ pub trait Request {
 
     fn serialize(&self, buf: &mut impl BufMut) -> Result<(), ParseError>;
 
+    fn size_hint(&self) -> usize {
+        16
+    }
+
     fn to_bytes(&self) -> Result<Bytes, ParseError> {
-        let mut v = Vec::new();
+        let mut v = Vec::with_capacity(self.size_hint());
         self.serialize(&mut v)?;
         Ok(v.into())
     }

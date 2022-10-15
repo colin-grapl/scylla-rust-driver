@@ -3,9 +3,7 @@ use criterion::{criterion_group, criterion_main, BatchSize, BenchmarkId, Criteri
 use scylla_cql::frame::request::Request;
 use scylla_cql::frame::value::SerializedValues;
 use scylla_cql::frame::value::ValueList;
-use scylla_cql::frame::{
-    compress_append, request::query, Compression, SerializedRequest,
-};
+use scylla_cql::frame::{compress_append, request::query, Compression, SerializedRequest};
 const HEADER_SIZE: usize = 9;
 
 // Macro to avoid lifetime issues

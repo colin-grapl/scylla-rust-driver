@@ -66,16 +66,21 @@ impl SerializedRequest {
         tracing: bool,
     ) -> Result<SerializedRequest, FrameError> {
         let mut flags = 0;
-        let mut data = Vec::with_capacity(32);
-        data.resize(HEADER_SIZE, 0);
-
-        if let Some(compression) = compression {
+        let mut data = if let Some(compression) = compression {
+            let mut data = Vec::with_capacity(32);
+            data.resize(HEADER_SIZE, 0);
             flags |= FLAG_COMPRESSION;
             let body = req.to_bytes()?;
             compress_append(&body, compression, &mut data)?;
+            data
         } else {
+            let mut data = Vec::with_capacity(req.size_hint() + 16);
+            //let mut data = Vec::with_capacity(32);
+            data.resize(HEADER_SIZE, 0);
+
             req.serialize(&mut data)?;
-        }
+            data
+        };
 
         if tracing {
             flags |= FLAG_TRACING;

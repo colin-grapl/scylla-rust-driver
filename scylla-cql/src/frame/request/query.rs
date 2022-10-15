@@ -30,6 +30,12 @@ impl Request for Query<'_> {
         self.parameters.serialize(buf)?;
         Ok(())
     }
+
+    fn size_hint(&self) -> usize {
+        std::mem::size_of::<i32>()
+            + self.contents.as_bytes().len()
+            + self.parameters.values.serialized_values_len()
+    }
 }
 
 pub struct QueryParameters<'a> {

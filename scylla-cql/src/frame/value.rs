@@ -7,10 +7,10 @@ use num_bigint::BigInt;
 use std::borrow::Cow;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::convert::TryInto;
+use std::mem::size_of;
 use std::net::IpAddr;
 use thiserror::Error;
 use uuid::Uuid;
-use std::mem::size_of;
 
 use super::response::result::CqlValue;
 use super::types::vint_encode;
@@ -134,6 +134,10 @@ impl SerializedValues {
             values_num: 0,
             contains_names: false,
         }
+    }
+
+    pub fn serialized_values_len(&self) -> usize {
+        self.serialized_values.len()
     }
 
     pub fn has_names(&self) -> bool {
