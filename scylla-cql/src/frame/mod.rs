@@ -233,11 +233,17 @@ pub fn compress_append(
 ) -> Result<(), FrameError> {
     match compression {
         Compression::Lz4 => {
-            let uncomp_len = uncomp_body.len() as u32;
-            let tmp = lz4_flex::compress(uncomp_body);
-            out.reserve_exact(std::mem::size_of::<u32>() + tmp.len());
-            out.put_u32(uncomp_len);
-            out.extend_from_slice(&tmp[..]);
+            let max_compressed_size = lz4_flex::block::get_maximum_output_size(uncomp_body.len());
+            // Reserve one 4 bytes for the `uncomp_len` + space for compressed output
+            out.reserve_exact(max_compressed_size + std::mem::size_of::<u32>());
+            out.put_u32(uncomp_body.len() as u32);
+            let uncomp_len = out.len();
+            // Zero initialize
+            out.resize(out.len() + max_compressed_size, 0);
+            let compressed_size =
+                lz4_flex::compress_into(uncomp_body, &mut out[uncomp_len..]).unwrap();
+            // Cout out the bytes we didn't use
+            out.truncate(out.len() - (max_compressed_size - compressed_size));
             Ok(())
         }
         Compression::Snappy => {
